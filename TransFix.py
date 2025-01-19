@@ -13,7 +13,7 @@ updated_count = 0
 def save_yaml(dst: Path, yaml: dict):
     contents = f"l_{dst_lang}:\n# File auto-generated using a tool preserving only the originals. Original contents in {src_lang} lang."
     for k, v in yaml.items():
-        contents += f"\n\t{k}: \"{v}\""
+        contents += f"\n\t{k}: {v}"
 
     with open(dst, 'w', encoding="utf-8-sig") as file:
         file.write(contents)
@@ -31,12 +31,14 @@ def get_keys_values(content: str):
             'l_spanish:' in line):
             continue
 
-        matches = re.match(r'(?:(.*?):\d+ "(.*?)"|(.+?): "(.*?)")', line, re.DOTALL)
+        # matches = re.match(r'(?:(.*?):\d+ "(.*?)"|(.+?): "(.*?)")', line, re.DOTALL)
+        matches = re.match(r'(?:(.*?):\d+ \"(.*?)$|(.+?): \"(.*?)$)', line, re.DOTALL)
 
         if not matches: continue
 
         key = matches.group(1) or matches.group(3)
         value = matches.group(2) or matches.group(4)
+        value = f"\"{value}" # Restore the lost '"' (too lazy to worry about doing it properly in regex)
 
         if key and value:
             count += 1
