@@ -4,47 +4,19 @@ from pathlib import Path
 import re
 
 src_lang = ""
-
 dst_lang = ""
 
 src_count = 0
 copy_count = 0
 updated_count = 0
 
-# def convert_string_to_dict(content: str) -> dict:
-#     pairs = content.split()
-#     new_dict = {}
-#     for pair in pairs:
-#         if ":" in pair:
-#             key, value = pair.split(":", 1)
-#             new_dict[key] = value
-#     return new_dict
+def save_yaml(dst: Path, yaml: dict):
+    contents = f"l_{dst_lang}:\n# File auto-generated using a tool preserving only the originals. Original contents in {src_lang} lang."
+    for k, v in yaml.items():
+        contents += f"\n\t{k}: \"{v}\""
 
-# def process_yaml(yaml_content: dict, lang: str) -> dict:
-#     if isinstance(yaml_content.get(f"l_{lang}"), str):
-#         yaml_content[f"l_{lang}"] = convert_string_to_dict(yaml_content[f"l_{lang}"])
-#     return yaml_content
-
-# def sync_file(src: Path, dst: Path):
-#     with open(src, 'r', encoding="utf-8-sig") as file:
-#         src_yaml = yaml.safe_load(file) or {}
-        
-#     with open(dst, 'r', encoding="utf-8-sig") as file:
-#         dst_yaml = yaml.safe_load(file) or {}
-
-#     src_yaml = process_yaml(src_yaml, src_lang)
-#     dst_yaml = process_yaml(dst_yaml, dst_lang)
-
-#     print("Source YAML structure:", src_yaml)
-
-#     # Some files may have a localization section without anything in it
-#     if not src_yaml.get(f"l_{src_lang}"):
-#         print(f"No l_{src_lang} section found in {src}")
-#         return
-    
-#     for key in src_yaml.get(f"l_{src_lang}"):
-#         if key not in dst_yaml[f"l_{dst_lang}"]:
-#             print(f"Found missing key: {key} with value: {src_yaml[f'l_{src_lang}'][key]}")
+    with open(dst, 'w', encoding="utf-8-sig") as file:
+        file.write(contents)
 
 def get_keys_values(content: str):
     translations = dict()
@@ -80,27 +52,21 @@ def sync_file(src: Path, dst: Path):
     with open(dst, 'r', encoding="utf-8-sig") as file:
         dst_content = file.read()
 
-    # Debugging
-    # print("-------------------------------------------------------------")
-    # print("Source file:", src)
-    # print("Source YAML structure:", src_content)
-
     src_kv = get_keys_values(src_content)
     dst_kv = get_keys_values(dst_content)
 
     if not src_kv:
-        print("skipped")
         return
 
     modified = False
-    # print(len(src_kv))
     for k, v in src_kv.items():
         if k not in dst_kv:
-            print(f"Added: {k} to {dst}")
             dst_kv[k] = v
             modified = True
 
     if modified:
+        print(f"Merge::From {src} to {dst}")
+        save_yaml(dst, dst_kv)
         global updated_count
         updated_count += 1
     
@@ -111,15 +77,15 @@ def sync_files(src: list[Path]):
         src_count += 1
         dst_file = Path(str(src_file).replace(src_lang, dst_lang))
         if not dst_file.exists():
-            # print(f"Copy::From {src_file} to {dst_file}")
-            # dst_file.parent.mkdir(exist_ok=True)
+            print(f"Copy::From {src_file} to {dst_file}")
+            dst_file.parent.mkdir(exist_ok=True)
 
-            # # Change l_{src_lang} to l_{dst_lang} (l_english => l_spanish, for example)
-            # with open(src_file, 'r', encoding="utf-8-sig") as file:
-            #     content = file.read()
-            # content = content.replace(f"l_{src_lang}", f"l_{dst_lang}")
-            # with open(dst_file, 'w', encoding="utf-8-sig") as file:
-            #     file.write(content)
+            # Change l_{src_lang} to l_{dst_lang} (l_english => l_spanish, for example)
+            with open(src_file, 'r', encoding="utf-8-sig") as file:
+                content = file.read()
+            content = content.replace(f"l_{src_lang}", f"l_{dst_lang}")
+            with open(dst_file, 'w', encoding="utf-8-sig") as file:
+                file.write(content)
             copy_count += 1
         else: # just sync those files that already exists, to avoid syncing the copied ones
             sync_file(src_file, dst_file)
